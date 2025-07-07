@@ -1,7 +1,7 @@
 [Unit]
 Description=Freya Environment Sensor Driver
 Documentation=https://github.com/Freya-Vivariums
-After=io.freya.Core.service
+After=multi-user.target dbus.service
 
 [Service]
 WorkingDirectory=/opt/Freya/hardware/EnvironmentSensor
