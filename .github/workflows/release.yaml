@@ -3,6 +3,9 @@ on:
   release:
     types: [created]
 
+permissions:
+  contents: write    # needed by action-gh-release
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -26,37 +29,31 @@ jobs:
 
       - name: Gather required files
         run: |
-            mkdir tempdir;                         \
-            mv ./package.json ./tempdir/;          \
-            mv ./build ./tempdir/;                 \
-            mv ./io.freya.EnvironmentSensorDriver.service ./tempdir/; \
-            mv ./uninstall.sh ./tempdir;
+          mkdir tempdir
+          mv package.json tempdir/
+          mv build tempdir/
+          mv io.freya.EnvironmentSensorDriver.service tempdir/
+          mv uninstall.sh tempdir
 
       - name: Create tarball
-        run: tar -C ./tempdir -zcvf package.tar.gz .
+        run: tar -C tempdir -zcvf package.tar.gz .
 
-      - name: Get Project Name
+      - name: Extract project name
         id: project_name
         run: |
-            PROJECT_NAME=$(echo ${{ github.repository }} | cut -d'/' -f2)
-            echo "name=$PROJECT_NAME" >> $GITHUB_STATE
+          # grab the repo name (after the slash) and export as a step output
+          echo "name=$(basename ${{ github.repository }})" >> $GITHUB_OUTPUT
 
-      - name: Upload packaged project build to release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN:  ${{ secrets.GH_TOKEN }}
-        with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: package.tar.gz
-          asset_name: ${{ steps.project_name.outputs.name }}-${{ github.event.release.tag_name }}.tar.gz
-          asset_content_type: application/gzip
+      - name: Rename package
+        run: |
+          mv package.tar.gz ${{ steps.project_name.outputs.name }}-${{ github.event.release.tag_name }}.tar.gz
 
-      - name: Upload install script to release assets
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN:  ${{ secrets.GH_TOKEN }}
+      - name: Upload release assets
+        uses: softprops/action-gh-release@v2
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: install.sh
-          asset_name: install.sh
-          asset_content_type: application/octet-stream
+          # newline-delimited list of files to upload
+          files: |
+            ${{ steps.project_name.outputs.name }}-${{ github.event.release.tag_name }}.tar.gz
+            install.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
