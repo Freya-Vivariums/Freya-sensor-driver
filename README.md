@@ -17,6 +17,16 @@ chmod +x ./install.sh;
 sudo ./install.sh;
 ```
 
+The software is installed as a `systemd` service, which is automatically started.
+```
+# systemctl status io.freya.HardwareInterface.service
+```
+
+To view the log files of the service, run:
+```
+# journalctl -u io.freya.HardwareInterface.service -f
+```
+
 ## Application programming
 The Freya Sensor Driver uses `DBus` to interact with applications.
 
