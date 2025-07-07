@@ -1,0 +1,13 @@
+[Unit]
+Description=Freya Environment Sensor Driver
+Documentation=https://github.com/Freya-Vivariums
+After=io.freya.Core.service
+
+[Service]
+WorkingDirectory=/opt/Freya/hardware/EnvironmentSensor
+Type=simple
+ExecStart=/usr/bin/node /opt/Freya/hardware/EnvironmentSensor/build/index.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
