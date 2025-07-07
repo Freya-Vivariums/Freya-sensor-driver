@@ -1,6 +1,12 @@
 ![Freya Banner](https://raw.githubusercontent.com/Freya-Vivariums/.github/refs/heads/main/brand/Freya_banner.png)
 
+<a href="https://github.com/Freya-Vivariums/Freya-sensor" target="_blank" >
+<img src="https://github.com/Freya-Vivariums/.github/blob/main/documentation/Freya_Sensor_800x800.jpg?raw=true" align="right" width="40%"/>
+</a>
+
 The **Freya Sensor Driver** project contains all software components to use the [Freya Sensor](https://github.com/Freya-Vivariums/Freya-sensor).
+
+<br clear="right"/>
 
 ## Installation
 When installing the Freya system, the **sensor driver is automatically installed** with the rest of the system. For manual installation run these commands on your device:
