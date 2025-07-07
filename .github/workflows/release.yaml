@@ -41,12 +41,16 @@ jobs:
           asset_name: install.sh
           asset_content_type: application/octet-stream
 
-      - name: Upload npm package as release asset
+      - name: Determine repo name
+        run: |
+          echo "REPO_NAME=${GITHUB_REPOSITORY#*/}" >> $GITHUB_ENV
+
+      - name: Upload packaged project build to release assets
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN:  ${{ secrets.GH_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ env.PACKAGE_FILE }}
-          asset_name: ${{ env.PACKAGE_FILE }}
+          asset_path: package.tar.gz
+          asset_name: ${{ env.REPO_NAME }}-${{ github.event.release.tag_name }}.tar.gz
           asset_content_type: application/gzip
