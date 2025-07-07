@@ -2,6 +2,16 @@
 
 The **Freya Sensor Driver** project contains all software components to use the [Freya Sensor](https://github.com/Freya-Vivariums/Freya-sensor).
 
+## Installation
+When installing the Freya system, the **sensor driver is automatically installed** with the rest of the system. For manual installation run these commands on your device:
+
+```
+wget -O install.sh https://github.com/Freya-Vivariums/Freya-sensor-driver/releases/latest/download/install.sh;
+chmod +x ./install.sh;
+sudo ./install.sh;
+```
+
+
 ## License & Collaboration
 **Copyright© 2025 Sanne 'SpuQ' Santens**. The Freya Sensor Driver project is licensed under the **[MIT License](LICENSE.txt)**. The [Rules & Guidelines](https://github.com/Freya-Vivariums/.github/blob/main/brand/Freya_Trademark_Rules_and_Guidelines.md) apply to the usage of the Freya Vivariums™ brand.
 
