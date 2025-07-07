@@ -11,6 +11,8 @@ chmod +x ./install.sh;
 sudo ./install.sh;
 ```
 
+## Application programming
+The Freya Sensor Driver uses `DBus` to interact with applications.
 
 ## License & Collaboration
 **Copyright© 2025 Sanne 'SpuQ' Santens**. The Freya Sensor Driver project is licensed under the **[MIT License](LICENSE.txt)**. The [Rules & Guidelines](https://github.com/Freya-Vivariums/.github/blob/main/brand/Freya_Trademark_Rules_and_Guidelines.md) apply to the usage of the Freya Vivariums™ brand.
