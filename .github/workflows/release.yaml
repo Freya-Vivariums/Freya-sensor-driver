@@ -38,7 +38,7 @@ jobs:
       - name: Upload install.sh as release asset
         uses: actions/upload-release-asset@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./install.sh
           asset_name: install.sh
@@ -47,7 +47,7 @@ jobs:
       - name: Upload npm package as release asset
         uses: actions/upload-release-asset@v2
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GH_TOKEN }}
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ env.PACKAGE_FILE }}
           asset_name: ${{ env.PACKAGE_FILE }}
