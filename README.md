@@ -19,12 +19,12 @@ sudo ./install.sh;
 
 The software is installed as a `systemd` service, which is automatically started.
 ```
-# systemctl status io.freya.HardwareInterface.service
+systemctl status io.freya.EnvironmentSensor.service
 ```
 
 To view the log files of the service, run:
 ```
-# journalctl -u io.freya.HardwareInterface.service -f
+journalctl -u io.freya.EnvironmentSensor.service -f
 ```
 
 ## Application programming
