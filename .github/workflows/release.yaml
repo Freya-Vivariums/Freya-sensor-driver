@@ -2,8 +2,9 @@ name: Release Package
 
 on:
   release:
-    types: [created]
+    types: [published]
 
+# ensure we can upload release assets
 permissions:
   contents: write
 
@@ -35,16 +36,18 @@ jobs:
           echo "PACKAGE_FILE=$PACKAGE_FILE" >> $GITHUB_ENV
 
       - name: Upload install.sh as release asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ./install.sh
           asset_name: install.sh
           asset_content_type: application/x-sh
 
       - name: Upload npm package as release asset
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@v2
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           upload_url: ${{ github.event.release.upload_url }}
           asset_path: ${{ env.PACKAGE_FILE }}
           asset_name: ${{ env.PACKAGE_FILE }}
