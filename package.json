@@ -8,7 +8,7 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "build": "tsc",
-    "deploy": "bash ./deploy.sh",
+    "deploy": "bash ./scripts/deploy.sh",
     "dev": "nodemon --watch src src/index.ts",
     "start": "node build/index.js"
   },

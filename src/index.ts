@@ -8,63 +8,74 @@
  */
 const dbus = require('dbus-native');
 import i2c from 'i2c-bus';
-import BME680 from './bme680';
+import { EventEmitter } from 'events';
+
+//import BME680 from './bme680';
 
 // D-Bus configuration
-const SERVICE_NAME   = 'io.freya.EnvironmentSensorDriver';
-const OBJECT_PATH    = '/io/freya/EnvironmentSensorDriver';
-const INTERFACE_NAME = 'io.freya.EnvironmentSensorDriver';
-const SAMPLE_INTERVAL = 10*1000; // ms
+const DBUS_SERVICE   = 'io.freya.EnvironmentSensorDriver';
+const DBUS_PATH    =  '/io/freya/EnvironmentSensorDriver';
+const DBUS_INTERFACE = 'io.freya.EnvironmentSensorDriver';
+let sampleInterval = 10*1000; // ms
 
-// Initialize I2C and sensor
-const i2cBus = i2c.openSync(1);
-const sensor = new BME680(0x76, i2cBus);
 
-// Connect to system bus and claim service name
-const systemBus = dbus.systemBus();
-systemBus.requestName(SERVICE_NAME, 0, (err:any, retCode:any) => {
-  if (err) throw err;
-  if (retCode !== 1) {
-    console.error(`Name ${SERVICE_NAME} is taken, retCode=${retCode}`);
-    process.exit(1);
+class EnvSensorDriver extends EventEmitter {
+  private sampleInterval = 10_000;
+
+  constructor(private bus: any) {
+    super();
+    // export D-Bus interface as soon as we construct
+    bus.exportInterface(
+      this,
+      DBUS_PATH,
+      {
+        name: DBUS_INTERFACE,
+        methods: {
+          setSampleInterval: ['i', 'b']
+        },
+        signals: {
+          measurement: ['ss','s']
+        }
+      }
+    );
   }
-  console.log(`Acquired D-Bus name: ${SERVICE_NAME}`);
-  exportInterface();
-});
 
-function exportInterface() {
-  const ifaceImpl = {
-    GetMeasurements: () => {
-      return readMeasurements();
-    },
-    MeasurementsUpdated: (_data: Record<string, number>) => {}
-  };
+  // D-Bus-exposed method:
+  setSampleInterval(interval: number): boolean {
+    this.sampleInterval = interval;
+    return true;
+  }
 
-  const ifaceDesc = {
-    name: INTERFACE_NAME,
-    methods: {
-      GetMeasurements: ['', 'a{d}', [], ['measurements']]
-    },
-    signals: {
-      MeasurementsUpdated: ['a{d}', ['measurements']]
+  // whenever you want to send a new reading down the bus:
+  public pushMeasurement(variable: string, value: string ) {
+    // this.emit is EventEmitter.emit; dbus-native watches for it
+    this.emit('measurement', variable, value);
+  }
+}
+
+async function main() {
+  const systemBus = dbus.systemBus();
+
+  // 1) acquire the well-known name
+  systemBus.requestName(DBUS_SERVICE, 0, (err: any, retCode: number) => {
+    if (err) {
+      console.error('Failed to request name:', err);
+      process.exit(1);
     }
-  };
+    if (retCode !== 1) {
+      console.error('Name already taken or unexpected reply:', retCode);
+      process.exit(1);
+    }
 
-  systemBus.exportInterface(ifaceImpl, OBJECT_PATH, ifaceDesc);
-  console.log(`Exported interface at ${OBJECT_PATH}`);
+    console.log(`Acquired ${DBUS_SERVICE} on system bus`);
+    // 2) now we can create & export our driver
+    const driver = new EnvSensorDriver(systemBus);
 
-  setInterval(() => {
-    const data = readMeasurements();
-    // @ts-ignore: emit signal
-    ifaceImpl.MeasurementsUpdated(data);
-    console.log('Emitted MeasurementsUpdated:', data);
-  }, SAMPLE_INTERVAL);
+    // 3) periodically emit
+    setInterval(() => {
+      driver.pushMeasurement('temperature', '33');
+    }, driver['sampleInterval']);
+  });
 }
 
-function readMeasurements(): Record<string, number> {
-  const temperature = sensor.getTemperature();
-  const humidity    = sensor.getHumidity();
-  const pressure    = sensor.getPressure();
-  const gas         = sensor.getGasResistance();
-  return { temperature, humidity, pressure, gas };
-}
+main();

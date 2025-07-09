@@ -4,9 +4,9 @@ Documentation=https://github.com/Freya-Vivariums
 After=multi-user.target dbus.service
 
 [Service]
-WorkingDirectory=/opt/Freya/hardware/EnvironmentSensor
+WorkingDirectory=/opt/Freya/hardware/sensor-driver
 Type=simple
-ExecStart=/usr/bin/node /opt/Freya/hardware/EnvironmentSensor/build/index.js
+ExecStart=/usr/bin/node /opt/Freya/hardware/sensor-driver/build/index.js
 Restart=on-failure
 
 [Install]
