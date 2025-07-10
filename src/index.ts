@@ -1,10 +1,10 @@
 /*
  *  Freya Sensor Driver
  *  The hardware-dependent component of the Freya Vivarium Control System, designed
- *  for use with the Edgeberry hardware (Base Board + Sense'n'Drive hardware cartridge)
- *  and the Freya Sensor (v1).
+ *  for use with the Freya Sensor (v1).
  *
- *  by Sanne 'SpuQ' Santens
+ *  Copyright© 2025 Sanne “SpuQ” Santens
+ *  Released under the MIT License (see LICENSE.txt)
  */
 const dbus = require('dbus-native');
 import i2c from 'i2c-bus';
@@ -16,17 +16,18 @@ import { EventEmitter } from 'events';
 const DBUS_SERVICE   = 'io.freya.EnvironmentSensorDriver';
 const DBUS_PATH    =  '/io/freya/EnvironmentSensorDriver';
 const DBUS_INTERFACE = 'io.freya.EnvironmentSensorDriver';
-let sampleInterval = 10*1000; // ms
-
+// Sensor sample interval limits
+const SAMPLEINT_MIN = 0.5           // 30 seconds
+const SAMPLEINT_MAX = 12*60*60*1000 // 12 hours
 
 class EnvSensorDriver extends EventEmitter {
-  private sampleInterval = 10_000;
+  public sampleInterval = 10*1000;   // Default interval set to 10 seconds
 
   constructor(private bus: any) {
     super();
     // export D-Bus interface as soon as we construct
     bus.exportInterface(
-      this,
+      this,     // for emiting signals (?)
       DBUS_PATH,
       {
         name: DBUS_INTERFACE,
@@ -42,7 +43,10 @@ class EnvSensorDriver extends EventEmitter {
 
   // D-Bus-exposed method:
   setSampleInterval(interval: number): boolean {
-    this.sampleInterval = interval;
+    // Reject interval settings that are out of bounds
+    if( interval < SAMPLEINT_MIN || interval > SAMPLEINT_MAX ) return false;
+    // Set the interval and return success
+    this.sampleInterval = interval*1000;
     return true;
   }
 
@@ -73,8 +77,10 @@ async function main() {
 
     // 3) periodically emit
     setInterval(() => {
-      driver.pushMeasurement('temperature', '33');
-    }, driver['sampleInterval']);
+      // dummy values for testing
+      driver.pushMeasurement('temperature', '24.3');
+      driver.pushMeasurement('humidity', '53.5');
+    }, driver.sampleInterval);
   });
 }
 
