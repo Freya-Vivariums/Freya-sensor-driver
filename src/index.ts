@@ -7,10 +7,16 @@
  *  Released under the MIT License (see LICENSE.txt)
  */
 const dbus = require('dbus-native');
-import i2c from 'i2c-bus';
 import { EventEmitter } from 'events';
 
-//import BME680 from './bme680';
+//import IC libraries
+import BME680 from './bme680';
+import VEML6030 from './veml6030';
+import AS7331 from './as7331';
+
+const BME680_I2C_ADDRESS = 0x76;
+const VEML6030_I2C_ADDRESS = 0x10;
+const AS7331_I2C_ADDRESS = 0x74;
 
 // D-Bus configuration
 const DBUS_SERVICE   = 'io.freya.EnvironmentSensorDriver';
@@ -58,7 +64,19 @@ class EnvSensorDriver extends EventEmitter {
 }
 
 async function main() {
+  // DBus client
   const systemBus = dbus.systemBus();
+  // Initialize the BME680
+  const bme680 = new BME680( BME680_I2C_ADDRESS );   // Create the BME680 driver object
+  await bme680.init();                               // Initialize the BME680
+
+  // Initialize the VEML6030
+  const veml6030 = new VEML6030( VEML6030_I2C_ADDRESS );
+  await veml6030.init();
+
+  // Inintialize the AS7331
+  const as7331 = new AS7331( AS7331_I2C_ADDRESS );
+  await as7331.init();
 
   // 1) acquire the well-known name
   systemBus.requestName(DBUS_SERVICE, 0, (err: any, retCode: number) => {
@@ -76,10 +94,24 @@ async function main() {
     const driver = new EnvSensorDriver(systemBus);
 
     // 3) periodically emit
-    setInterval(() => {
+    setInterval(async() => {
       // dummy values for testing
-      driver.pushMeasurement('temperature', '24.3');
-      driver.pushMeasurement('humidity', '53.5');
+  
+      let data:any = await bme680.read();
+      driver.pushMeasurement('temperature', data.temperature.toFixed(2));
+      driver.pushMeasurement('humidity', data.humidity.toFixed(2));
+      driver.pushMeasurement('pressure', data.pressure.toFixed(2));
+      // Gas Reistance is not correctly implemented yet!
+      //driver.pushMeasurement('gasresistance', data.gasResistance.toFixed(2));
+
+      data = await veml6030.read();
+      driver.pushMeasurement('light', data.lux.toFixed(2));
+
+      data = await as7331.read();
+      driver.pushMeasurement('uva', data.uva.toFixed(2));
+      driver.pushMeasurement('uvb', data.uvb.toFixed(2));
+      driver.pushMeasurement('uvc', data.uvc.toFixed(2));
+      
     }, driver.sampleInterval);
   });
 }

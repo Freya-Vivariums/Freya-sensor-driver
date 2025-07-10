@@ -5,62 +5,165 @@
  *  by Sanne "SpuQ" Santens, late 2024
  */
 
-// Register addresses
-const VEML6030_REG_ALS_CONF = 0x00;     // Configuration register
-const VEML6030_REG_ALS = 0x04;          // ALS (ambient light sensor) data register
-const VEML6030_REG_POWER_SAVE = 0x03;   // Power-saving register
+import { openPromisified, PromisifiedBus } from 'i2c-bus';
 
+/**
+ * VEML6030 ambient light sensor driver for Raspberry Pi (Node.js).
+ *
+ * Measures ambient light intensity in lux via I²C, following Vishay VEML6030 datasheet (Doc. R101048).
+ * Supports configurable gain and integration time, plus >1klux compensation polynomial.
+ */
 export default class VEML6030 {
-    private i2c_address:number|null = null;
-    private i2c_interface:any|null = null;
+  private i2c!: PromisifiedBus;
+  private address: number;
 
-    constructor( i2c_address:number, i2c_interface:any){
-        this.i2c_address=i2c_address;
-        this.i2c_interface=i2c_interface;
+  private busNumber: number = 1;
+  /**
+   * Current ALS gain factor (e.g. 2, 1, 1/4, 1/8).
+   * Used in lux conversion formula.
+   */
+  private gainValue!: number;
 
-        // Initialize the sensor
-        this.init();
+  /**
+   * Integration time in milliseconds (25, 50, 100, 200, 400, 800).
+   */
+  private integrationTime!: number;
+
+  /**
+   * Scale factor: lux per raw count based on gain & integration time.
+   */
+  private luxPerCount!: number;
+
+  /**
+   * Create a new VEML6030 instance.
+   * @param busNumber - I2C bus number (default 1).
+   * @param address - 7-bit I2C address (0x48 default, 0x10 if ADDR pin low).
+   */
+  constructor( address:number) {
+
+    this.address = address;
+  }
+
+  /**
+   * Initialize sensor: open I2C bus, verify device ID, configure ALS settings.
+   * @param gainBits - 2-bit code for ALS gain (00=2×, 01=1×, 11=1/4×, 10=1/8×).
+   * @param itBits - 3-bit code for integration time (000=100ms,001=200ms,010=400ms,011=800ms,100=50ms,101=25ms).
+   * @throws if device ID mismatch.
+   */
+  public async init(
+    gainBits: number = 0b11,
+    itBits: number = 0b000
+  ): Promise<void> {
+    // Open I2C bus
+    this.i2c = await openPromisified(this.busNumber);
+
+    // Read device ID (reg 0x07 LSB should be 0x81) (§3.2)
+    const id = await this.i2c.readWord(this.address, 0x07);
+    const idLsb = id & 0xFF;
+    if (idLsb !== 0x81) {
+      throw new Error(`VEML6030 not found at 0x${this.address.toString(16)}`);
     }
 
-    // Function to write a 16-bit value to the VEML6030
-    private writeWord(register: number, value: number): void {
-        const buffer = Buffer.from([value & 0xff, (value >> 8) & 0xff]);
-        this.i2c_interface.writeI2cBlockSync(this.i2c_address, register, 2, buffer);
-    }
-  
-    // Function to read a 16-bit value from the VEML6030
-    private readWord(register: number): number {
-        const buffer = Buffer.alloc(2);
-        this.i2c_interface.readI2cBlockSync(this.i2c_address, register, 2, buffer);
-        return buffer[0] | (buffer[1] << 8);
+    // Store gain & IT values
+    this.gainValue = this.decodeGain(gainBits);
+    this.integrationTime = this.decodeIntegrationTime(itBits);
+
+    // Compute lux per count: base 0.0036lx/count at 800ms,2× (§AppNote)
+    const base = 0.0036;
+    this.luxPerCount =
+      base * (800 / this.integrationTime) * (2 / this.gainValue);
+
+    // Build 16-bit config: [15..13]=0, [12..11]=gainBits, [10]=INT disable (0),
+    // [9..7]=itBits, [6]=0, [5]=interrupt persist (0), [4]=0, [2]=shutdown(0)
+    const cfg = (gainBits << 11) | (itBits << 7);
+    await this.i2c.writeWord(this.address, 0x00, cfg);
+
+    // Delay one integration cycle before first read (§IT timing)
+    await this.delay(this.integrationTime + 10);
+  }
+
+  /**
+   * Read ambient light and return lux value.
+   * @returns Object with `lux` (floating-point).
+   */
+  public async read(): Promise<{ lux: number }> {
+    // Read raw ALS data (reg 0x04 LSB then MSB) (§3.8)
+    const raw = await this.i2c.readWord(this.address, 0x04);
+    const counts = raw & 0xFFFF;
+
+    // Convert to lux
+    let lux = counts * this.luxPerCount;
+
+    // Apply high-lux compensation if gain <=1/4 and lux >1000 (§AppNote)
+    if (this.gainValue <= 0.25 && lux > 1000) {
+      lux = this.compensateHighLux(lux);
     }
 
-    // Initialize the sensor
-    private init(): void {
-        try{
-            // Configure ALS integration time, gain, and mode
-            // Example: ALS gain 1x, integration time 100ms, power-on mode
-            const alsConfig = 0x0000;                           // Replace with actual configuration based on your needs
-            this.writeWord(VEML6030_REG_ALS_CONF, alsConfig);
+    return { lux };
+  }
 
-            // Configure power-saving mode (refer to datasheet)
-            this.writeWord(VEML6030_REG_POWER_SAVE, 0x0000);    // Power-saving disabled
-        }
-        catch(e){
-            console.error("Failed to initialize VEML6030: "+e);
-        }
+  /**
+   * Decode gain code to factor.
+   * @param bits - 2-bit gain code.
+   */
+  private decodeGain(bits: number): number {
+    switch (bits & 0b11) {
+      case 0b00:
+        return 2;
+      case 0b01:
+        return 1;
+      case 0b11:
+        return 0.25;
+      case 0b10:
+        return 0.125;
+      default:
+        return 1;
     }
+  }
 
-    // Read all sensor values
-    public readSensorData(): any {
-        const data = this.readWord(VEML6030_REG_ALS);
-
-        // Calculate lux value (refer to VEML6030 datasheet for scaling factors)
-        const gain = 1;                                               // Adjust based on your gain setting (e.g., 1x, 2x, etc.)
-        const integrationTime = 100;                                  // Adjust based on your integration time (e.g., 100ms, 200ms, etc.)
-        const lux = data * (0.0576 / gain) * (100 / integrationTime); // Example formula
-      
-        console.log(`Ambient Light: ${lux.toFixed(1)} lux`);
-        return {};
+  /**
+   * Decode integration time code to milliseconds.
+   * @param bits - 3-bit integration time code.
+   */
+  private decodeIntegrationTime(bits: number): number {
+    switch (bits & 0b111) {
+      case 0b000:
+        return 100;
+      case 0b001:
+        return 200;
+      case 0b010:
+        return 400;
+      case 0b011:
+        return 800;
+      case 0b100:
+        return 50;
+      case 0b101:
+        return 25;
+      default:
+        return 100;
     }
+  }
+
+  /**
+   * Non-linear compensation (>1klux) polynomial (§AppNote).
+   * lux_comp = A·lux^4 + B·lux^3 + C·lux^2 + D·lux
+   */
+  private compensateHighLux(lux: number): number {
+    // Coefficients from Vishay app note
+    const A = 6.0135e-13;
+    const B = -9.3924e-9;
+    const C = 8.1488e-5;
+    const D = 1.0023;
+    return A * Math.pow(lux, 4)
+      + B * Math.pow(lux, 3)
+      + C * Math.pow(lux, 2)
+      + D * lux;
+  }
+
+  /**
+   * Simple delay helper.
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
 }
