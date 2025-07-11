@@ -32,7 +32,8 @@ jobs:
           mkdir tempdir
           mv package.json tempdir/
           mv build tempdir/
-          mv io.freya.EnvironmentSensorDriver.service tempdir/
+          mv config/io.freya.EnvironmentSensorDriver.service tempdir/
+          mv config/io.freya.EnvironmentSensorDriver.conf tempdir/
           mv uninstall.sh tempdir
 
       - name: Create tarball
