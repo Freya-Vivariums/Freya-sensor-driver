@@ -4,6 +4,7 @@
   "description": "System driver for the Freya environment sensor",
   "author": "Sanne 'SpuQ' Santens",
   "license": "MIT",
+  "homepage": "https://github.com/Freya-Vivariums",
   "public": false,
   "main": "build/index.js",
   "scripts": {
@@ -13,14 +14,6 @@
     "dev": "nodemon --watch src src/index.ts",
     "start": "node build/index.js"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/SpuQ/Freya-hardware.git"
-  },
-  "bugs": {
-    "url": "https://github.com/SpuQ/Freya-hardware/issues"
-  },
-  "homepage": "https://github.com/SpuQ/Freya-hardware#readme",
   "dependencies": {
     "dbus-native": "^0.4.0",
     "i2c-bus": "^5.2.3"
