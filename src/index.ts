@@ -98,19 +98,19 @@ async function main() {
       // dummy values for testing
   
       let data:any = await bme680.read();
-      driver.pushMeasurement('temperature', data.temperature.toFixed(2));
-      driver.pushMeasurement('humidity', data.humidity.toFixed(2));
-      driver.pushMeasurement('pressure', data.pressure.toFixed(2));
+      driver.pushMeasurement('temperature', data.temperature.toFixed(1));
+      driver.pushMeasurement('humidity', data.humidity.toFixed(1));
+      driver.pushMeasurement('pressure', data.pressure.toFixed(1));
       // Gas Reistance is not correctly implemented yet!
       //driver.pushMeasurement('gasresistance', data.gasResistance.toFixed(2));
 
       data = await veml6030.read();
-      driver.pushMeasurement('light', data.lux.toFixed(2));
+      driver.pushMeasurement('light', data.lux.toFixed(1));
 
       data = await as7331.read();
-      driver.pushMeasurement('uva', data.uva.toFixed(2));
-      driver.pushMeasurement('uvb', data.uvb.toFixed(2));
-      driver.pushMeasurement('uvc', data.uvc.toFixed(2));
+      driver.pushMeasurement('uva', data.uva.toFixed(1));
+      driver.pushMeasurement('uvb', data.uvb.toFixed(1));
+      driver.pushMeasurement('uvc', data.uvc.toFixed(1));
       
     }, driver.sampleInterval);
   });
