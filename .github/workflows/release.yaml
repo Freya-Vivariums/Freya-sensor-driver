@@ -55,6 +55,6 @@ jobs:
           # newline-delimited list of files to upload
           files: |
             ${{ steps.project_name.outputs.name }}-${{ github.event.release.tag_name }}.tar.gz
-            scrips/install.sh
+            scripts/install.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
