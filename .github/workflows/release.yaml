@@ -34,7 +34,7 @@ jobs:
           mv build tempdir/
           mv config/io.freya.EnvironmentSensorDriver.service tempdir/
           mv config/io.freya.EnvironmentSensorDriver.conf tempdir/
-          mv scripts/uninstall.sh tempdir
+          cp scripts/uninstall.sh tempdir
 
       - name: Create tarball
         run: tar -C tempdir -zcvf package.tar.gz .
@@ -55,6 +55,6 @@ jobs:
           # newline-delimited list of files to upload
           files: |
             ${{ steps.project_name.outputs.name }}-${{ github.event.release.tag_name }}.tar.gz
-            install.sh
+            scrips/install.sh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
